@@ -1,0 +1,137 @@
+---
+title: "Severe Weather Events"
+author: "Rihad Variawa"
+date: '2019-02-01'
+image:
+  caption: ''
+  focal_point: ''
+slug: severe-weather-events
+summary: This analysis found that heat wave is the most harmful event for human health
+  with mean number of harmful events of 70, while flood is the event that does most
+  of economic damage with 24.5 billions of dollars in property damage.
+tags: []
+categories: R
+---
+## Preamble:
+
+Analyse how and to what extent can storms and other severe weather events cause both economic and health challenges. Many severe weather events result in either harm for people, such as fatalities or injuries; or can result in economic damage such as property damage.
+
+To perform this analysis, data from the [U.S. National Oceanic and Atmospheric Administration’s (NOAA)] storm database along with associated [documentation] and [FAQ]. The data starts in the year 1950 and ends in November 2011 and it follows 37 variables related to events, time, location, damage and so on.
+
+## Research question:
+
+1. across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+2. across the United States, which types of events have the greatest economic consequences?
+
+## Structure of analysis:
+
+I've chosen to quantify the harmful events for health as a sum of injuries and fatalities and compute the means for each severe weather event. On the other hand, economic damage was quantified as a mean property damage in billions of dollars by each severe weather type. 
+
+## Accessing the Data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+## install packages 
+list.of.packages <- c("data.table", "tidyverse", "knitr", "dplyr")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(data.table)
+library(tidyverse)
+library(knitr)
+library(dplyr)
+
+if(!file.exists("./data")) {
+  dir.create("./data")
+  url.data <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+  url.docu <- "https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf"
+  url.faq <- "https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf"
+  download.file(url.data, "./data/data.csv.bz2")
+  download.file(url.docu, "./data/documentation.pdf")
+  download.file(url.faq, "./data/faq.pdf")
+  }
+```
+
+```{r}
+data <- fread("data/data.csv.bz2", sep=",", header=TRUE)
+```
+
+## Exploratory Data Analysis
+
+Preview the dimensions of the data, looked how many missing values are there and looked at the structure of the data.
+
+The data was furthermore processed to include the variable **HARM** which represents the sum of **FATALITIES** and **INJURIES.** This variable is needed to answer the given questions.
+
+```{r}
+data_new <- mutate(data, HARM=FATALITIES+INJURIES)
+```
+
+```{r}
+dim(data_new)
+```
+
+Number of records and features.
+
+```{r}
+# test for missing values
+sapply(data_new,function (x) {sum(is.na(x))})
+```
+
+```{r}
+str(data_new)
+```
+
+```{r}
+data_q1 <- data_new %>%
+  group_by(EVTYPE) %>%
+  summarize(mean=mean(HARM, na.rm = TRUE)) %>%
+  arrange(desc(mean))
+head(data_q1)
+```
+
+Observations:
+
+* On average, the most harmful event type is heat wave, with mean of harmful events (injuries and fatalities) of 70.
+
+```{r}
+ggplot(data_q1[1:5,], aes(x=EVTYPE, y=mean)) + 
+  geom_col(color="black", aes(fill=EVTYPE)) +
+  labs(y="Mean value of harmful events", x="Event type",
+       title="5 most harmful event types") +
+         
+  theme(legend.position="none") +
+  theme_classic()
+```
+
+Observations:
+
+* A graphical illustration, where heat wave has highest mean number of harmful events, followed by torpical storm Gordon, wild fires, thunderstorm and tornadoes, tstm wind, hail.
+
+```{r}
+data_q2 <- data_new %>%
+  filter(PROPDMGEXP=="B") %>%
+  group_by(EVTYPE) %>%
+  summarize(mean=mean(PROPDMG, na.rm = TRUE)) %>%
+  arrange(desc(mean))
+head(data_q2)
+```
+
+Observations:
+
+* On average, the most economic damage has been done by flood. The mean of economic damage of flood is 24.5 billion dollars. 
+
+```{r}
+ggplot(data_q2[1:5,], aes(x=EVTYPE, y=mean)) + 
+  geom_col(color="black", aes(fill=EVTYPE)) +
+  labs(y="Mean of economic damage in billion dollars", x="Event type",
+       title="5 event types that do most of economic cost") +
+  
+  theme(legend.position="none") +
+  theme_classic()
+```
+
+Observations:
+
+* A graphical illustration, where flood has the highest economic damage, followed by storm surge, hurricane/typhon, topical storm and river flood. 
+* Showing the event with most impactful economic damages being **flood** with mean economic cost of **24.5 billion dollars.**
